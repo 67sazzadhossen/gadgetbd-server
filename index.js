@@ -1,5 +1,7 @@
 const express = require("express");
 const cors = require("cors");
+const jwt = require("jsonwebtoken");
+const cookieParser = require("cookie-parser");
 const { MongoClient, ServerApiVersion } = require("mongodb");
 require("dotenv").config();
 const app = express();
@@ -9,9 +11,11 @@ const port = process.env.PORT || 3000;
 app.use(
   cors({
     origin: ["http://localhost:5173", "https://gadgetbd-client.vercel.app"],
+    credentials: true,
   })
 );
 app.use(express.json());
+app.use(cookieParser());
 
 // MongoDb
 
@@ -24,6 +28,12 @@ const client = new MongoClient(uri, {
     deprecationErrors: true,
   },
 });
+
+const cookieOptions = {
+  httpOnly: true,
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+  secure: process.env.NODE_ENV === "production" ? true : false,
+};
 
 const userCollection = client.db("gadgetBd").collection("userCollection");
 const productCollection = client.db("gadgetBd").collection("productCollection");
@@ -38,6 +48,20 @@ const connectDb = async () => {
       }
       const result = await userCollection.insertOne(data);
       res.json({ message: "Success", status: 200 });
+    });
+
+    // Authentication by jwt
+    app.post("/jwt", async (req, res) => {
+      const user = req.body;
+      console.log(user);
+      const token = jwt.sign(user, process.env.JWT_SECRET, { expiresIn: "1h" });
+      res.cookie("token", token, cookieOptions).send({ success: true });
+    });
+
+    app.post("/log-out", async (req, res) => {
+      res
+        .clearCookie("token", { ...cookieOptions, maxAge: 0 })
+        .send({ success: true });
     });
 
     client.connect();

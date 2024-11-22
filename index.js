@@ -479,6 +479,7 @@ const connectDb = async () => {
     //   res.json({ success: true });
     // });
 
+    // user route
     // Load All Products with Pagination and Stats
     app.get("/all-products", async (req, res) => {
       try {
@@ -544,6 +545,195 @@ const connectDb = async () => {
       } catch (error) {
         res.status(500).json({ message: "Error loading products", error });
       }
+    });
+
+    // Add to Wishlist
+    app.put("/wishlist/add", async (req, res) => {
+      const { id, email } = req.query;
+
+      if (!id || !email) {
+        return res
+          .status(400)
+          .json({ success: false, message: "ID and Email are required." });
+      }
+
+      try {
+        // Check if the user exists
+        const user = await userCollection.findOne({ email });
+
+        if (!user) {
+          return res
+            .status(404)
+            .json({ success: false, message: "User not found." });
+        }
+
+        // Check if the item already exists in the wishlist
+        const exists = user.wishlist?.some((item) => item.toString() === id);
+
+        if (exists) {
+          return res.status(400).json({
+            success: false,
+            message: "Item already exists in the wishlist.",
+          });
+        }
+
+        // Add the product to the wishlist
+        const result = await userCollection.updateOne(
+          { email },
+          { $addToSet: { wishlist: new ObjectId(id) } }
+        );
+
+        res.json({
+          success: true,
+          message: "Item added to wishlist successfully.",
+          result,
+        });
+      } catch (error) {
+        console.error("Error adding to wishlist:", error);
+        res.status(500).json({
+          success: false,
+          message: "An error occurred while adding to wishlist.",
+          error,
+        });
+      }
+    });
+
+    // Remove from Wishlist
+    app.put("/wishlist/remove", async (req, res) => {
+      const { id, email } = req.query;
+
+      // Validate input
+      if (!id || !email) {
+        return res
+          .status(400)
+          .json({ success: false, message: "ID and Email are required." });
+      }
+
+      try {
+        // Remove the product from the wishlist
+        const result = await userCollection.updateOne(
+          { email: email },
+          { $pull: { wishlist: new ObjectId(id) } } // Use `$pull` to remove the item
+        );
+
+        // Check if any document was modified
+        if (result.modifiedCount === 0) {
+          return res.status(400).json({
+            success: false,
+            message: "Product not found in wishlist.",
+          });
+        }
+
+        res.json({ success: true, message: "Product removed from wishlist." });
+      } catch (error) {
+        console.error("Error removing from wishlist:", error);
+        res
+          .status(500)
+          .json({ success: false, message: "An error occurred.", error });
+      }
+    });
+
+    // wishlist products
+    app.get("/wishlist", async (req, res) => {
+      const { email } = req.query;
+      const user = await userCollection.findOne({ email: email });
+      const products = await productCollection
+        .find({ _id: { $in: user.wishlist.map((id) => new ObjectId(id)) } })
+        .toArray();
+      res.json({ success: true, data: products });
+    });
+
+    // Add to Cartlist
+    app.put("/cartlist/add", async (req, res) => {
+      const { id, email } = req.query;
+
+      // Validate input
+      if (!id || !email) {
+        return res
+          .status(400)
+          .json({ success: false, message: "ID and Email are required." });
+      }
+
+      try {
+        // Check if the product is already in the cartlist
+        const user = await userCollection.findOne({ email });
+
+        if (
+          user?.cartlist?.some((cartItem) => cartItem.equals(new ObjectId(id)))
+        ) {
+          return res.status(400).json({
+            success: false,
+            message: "Product is already in the cartlist.",
+          });
+        }
+
+        // Add the product to the cartlist
+        const result = await userCollection.updateOne(
+          { email },
+          { $addToSet: { cartlist: new ObjectId(id) } }
+        );
+
+        if (result.modifiedCount === 0) {
+          return res.status(404).json({
+            success: false,
+            message: "Failed to add product to cartlist.",
+          });
+        }
+
+        res.json({ success: true, message: "Product added to cartlist." });
+      } catch (error) {
+        console.error("Error adding to cartlist:", error);
+        res.status(500).json({
+          success: false,
+          message: "An error occurred while adding to the cartlist.",
+          error,
+        });
+      }
+    });
+
+    // remove from cartlist
+    app.put("/cartlist/remove", async (req, res) => {
+      const { id, email } = req.query;
+
+      // Validate input
+      if (!id || !email) {
+        return res
+          .status(400)
+          .json({ success: false, message: "ID and Email are required." });
+      }
+
+      try {
+        // Remove the product from the wishlist
+        const result = await userCollection.updateOne(
+          { email: email },
+          { $pull: { cartlist: new ObjectId(id) } } // Use `$pull` to remove the item
+        );
+
+        // Check if any document was modified
+        if (result.modifiedCount === 0) {
+          return res.status(400).json({
+            success: false,
+            message: "Product not found in cartlist.",
+          });
+        }
+
+        res.json({ success: true, message: "Product removed from cartlist." });
+      } catch (error) {
+        console.error("Error removing from cartlist:", error);
+        res
+          .status(500)
+          .json({ success: false, message: "An error occurred.", error });
+      }
+    });
+
+    // cartlist products
+    app.get("/cartlist", async (req, res) => {
+      const { email } = req.query;
+      const user = await userCollection.findOne({ email: email });
+      const products = await productCollection
+        .find({ _id: { $in: user.cartlist.map((id) => new ObjectId(id)) } })
+        .toArray();
+      res.json({ success: true, data: products });
     });
 
     // Save User After Sign-Up

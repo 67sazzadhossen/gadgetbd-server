@@ -20,6 +20,7 @@ app.use(cookieParser());
 // Verify Token Middleware
 const verifyToken = (req, res, next) => {
   const token = req.cookies?.token;
+
   if (!token) {
     return res.status(401).send({ message: "Unauthorized access" });
   }
@@ -36,10 +37,45 @@ const verifyToken = (req, res, next) => {
   });
 };
 
+const verifyBuyer = async (req, res, next) => {
+  try {
+    // Verify the token first
+    const token = req.cookies?.token;
+    if (!token) {
+      return res.status(401).send({ message: "Unauthorized access" });
+    }
+
+    // Decode the token
+    jwt.verify(token, process.env.JWT_SECRET, async (err, decoded) => {
+      if (err) {
+        return res.status(401).send({ message: "Unauthorized access" });
+      }
+
+      // Attach the decoded user data to the request object
+      req.user = decoded;
+
+      // Fetch user from the database to check role
+      const user = await userCollection.findOne({ email: req.user?.email });
+
+      // Check if the user's role is 'seller'
+      if (user.role !== "buyer") {
+        return res
+          .status(403)
+          .send({ message: "Forbidden access, buyer only" });
+      }
+
+      // Proceed to the next middleware/route handler
+      next();
+    });
+  } catch (error) {
+    res.status(500).send({ message: "Server error", error });
+  }
+};
 const verifySeller = async (req, res, next) => {
   try {
     // Verify the token first
     const token = req.cookies?.token;
+    // console.log("clicked");
     if (!token) {
       return res.status(401).send({ message: "Unauthorized access" });
     }
@@ -75,13 +111,17 @@ const verifyAdmin = async (req, res, next) => {
   try {
     // Verify the token first
     const token = req.cookies?.token;
+    // console.log("verify admin");
     if (!token) {
+      // console.log("check token");
       return res.status(401).send({ message: "Unauthorized access" });
     }
 
     // Decode the token
     jwt.verify(token, process.env.JWT_SECRET, async (err, decoded) => {
+      // console.log("verifying");
       if (err) {
+        // console.log("err");
         return res.status(401).send({ message: "Unauthorized access" });
       }
 
@@ -90,12 +130,13 @@ const verifyAdmin = async (req, res, next) => {
 
       // Fetch user from the database to check role
       const user = await userCollection.findOne({ email: req.user?.email });
+      // console.log(user?.role);
 
-      // Check if the user's role is 'seller'
+      // Check if the user's role is 'admin'
       if (user.role !== "admin") {
         return res
           .status(403)
-          .send({ message: "Forbidden access, seller only" });
+          .send({ message: "Forbidden access, admin only" });
       }
 
       // Proceed to the next middleware/route handler
@@ -182,7 +223,7 @@ const connectDb = async () => {
     });
 
     // My Products
-    app.get("/my-products", verifyToken, verifySeller, async (req, res) => {
+    app.get("/my-products", verifyToken, async (req, res) => {
       try {
         const email = req.query.email;
         const result = await productCollection.find({ email }).toArray();
@@ -198,6 +239,7 @@ const connectDb = async () => {
     app.get("/all-products", async (req, res) => {
       try {
         const queryParams = req.query;
+        // console.log(queryParams);
 
         // Build query filters
         const query = {};
@@ -218,6 +260,7 @@ const connectDb = async () => {
         const page = parseInt(queryParams.page) || 1; // Default to page 1
         const limit = parseInt(queryParams.limit) || 6; // Default to 10 items per page
         const skip = (page - 1) * limit;
+        // console.log(skip);
 
         // Sorting parameters
         const sortField = queryParams.sortField || "createdAt"; // Default to `createdAt`
@@ -275,7 +318,7 @@ const connectDb = async () => {
     });
 
     // Add to Wishlist
-    app.put("/wishlist/add", verifyToken, async (req, res) => {
+    app.put("/wishlist/add", verifyToken, verifyBuyer, async (req, res) => {
       const { id, email } = req.query;
 
       if (!id || !email) {
@@ -326,7 +369,7 @@ const connectDb = async () => {
     });
 
     // Remove from Wishlist
-    app.put("/wishlist/remove", verifyToken, async (req, res) => {
+    app.put("/wishlist/remove", verifyToken, verifyBuyer, async (req, res) => {
       const { id, email } = req.query;
 
       // Validate input
@@ -371,7 +414,7 @@ const connectDb = async () => {
     });
 
     // Add to Cartlist
-    app.put("/cartlist/add", verifyToken, async (req, res) => {
+    app.put("/cartlist/add", verifyToken, verifyBuyer, async (req, res) => {
       const { id, email } = req.query;
 
       // Validate input
@@ -419,7 +462,7 @@ const connectDb = async () => {
     });
 
     // remove from cartlist
-    app.put("/cartlist/remove", verifyToken, async (req, res) => {
+    app.put("/cartlist/remove", verifyToken, verifyBuyer, async (req, res) => {
       const { id, email } = req.query;
 
       // Validate input
@@ -454,7 +497,7 @@ const connectDb = async () => {
     });
 
     // cartlist products
-    app.get("/cartlist", verifyToken, async (req, res) => {
+    app.get("/cartlist", verifyToken, verifyBuyer, async (req, res) => {
       const { email } = req.query;
       const user = await userCollection.findOne({ email: email });
       const products = await productCollection
@@ -472,8 +515,9 @@ const connectDb = async () => {
     });
 
     //update user role
-    app.put("/user/update-role", async (req, res) => {
+    app.put("/user/update-role", verifyToken, verifyAdmin, async (req, res) => {
       const { id, role } = req.query;
+      // console.log(role);
 
       // Check if id or role is missing
       if (!id || !role) {
@@ -512,7 +556,7 @@ const connectDb = async () => {
     // delete an user
     app.delete("/user/delete", verifyToken, verifyAdmin, async (req, res) => {
       const { id } = req.query;
-      console.log(id);
+      // console.log("hi");
       const resp = await userCollection.deleteOne({ _id: new ObjectId(id) });
       res.status(200).json({ success: true });
     });

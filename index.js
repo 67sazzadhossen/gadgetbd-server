@@ -404,7 +404,7 @@ const connectDb = async () => {
     });
 
     // wishlist products
-    app.get("/wishlist", verifyToken, async (req, res) => {
+    app.get("/wishlist", async (req, res) => {
       const { email } = req.query;
       const user = await userCollection.findOne({ email: email });
       const products = await productCollection

@@ -16,7 +16,7 @@
 - **Password**: P@hero331  
 
 ### Admin Account  
-- **Email**: phero@gmail.com  
+- **Email**: phero.admin@gmail.com   
 - **Password**: P@hero331  
 
 ---

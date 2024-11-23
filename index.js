@@ -412,7 +412,7 @@ const connectDb = async () => {
     // app.get("/wishlist", verifyToken, async (req, res) => {
     // });
 
-    app.get("/wishlist", verifyToken, async (req, res) => {
+    app.get("/wishlist", async (req, res) => {
       try {
         const { email } = req.query;
 

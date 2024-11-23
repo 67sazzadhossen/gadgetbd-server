@@ -404,7 +404,7 @@ const connectDb = async () => {
     });
 
     // Wishlist products
-    app.get("/wishlist", verifyToken, async (req, res) => {
+    app.get("/wishlist", async (req, res) => {
       try {
         const { email } = req.query;
 

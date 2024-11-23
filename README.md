@@ -34,7 +34,7 @@ When a user signs up for the first time, they are automatically assigned the **b
 
 ## Installation Instructions
 
-### Client  
+### Client and Server
 ```bash
 # Clone the client repository
 git clone https://github.com/67sazzadhossen/gadgetbd_client.git
@@ -57,7 +57,7 @@ VITE_IMAGE_API_KEY=fe35fcaec279368849eb9b9432934a38
 npm run dev
 
 
-### server
+** Server **
 
 # Clone the server repository
 git clone https://github.com/67sazzadhossen/gadgetbd-server.git

@@ -23,7 +23,7 @@ const verifyToken = (req, res, next) => {
   console.log(token);
 
   if (!token) {
-    return res.status(401).send({ message: "Unauthorized access" });
+    return res.status(404).send({ message: "token not found" });
   }
   jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
     if (err) {

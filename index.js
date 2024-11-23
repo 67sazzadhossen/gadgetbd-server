@@ -20,6 +20,7 @@ app.use(cookieParser());
 // Verify Token Middleware
 const verifyToken = (req, res, next) => {
   const token = req.cookies?.token;
+  console.log(token);
 
   if (!token) {
     return res.status(401).send({ message: "Unauthorized access" });
@@ -621,6 +622,7 @@ const connectDb = async () => {
         const token = jwt.sign(user, process.env.JWT_SECRET, {
           expiresIn: "1h",
         });
+        console.log(token);
         res.cookie("token", token, cookieOptions).json({ success: true });
       } catch (error) {
         res.status(500).json({ message: "Error generating token", error });

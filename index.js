@@ -19,9 +19,10 @@ app.use(cookieParser());
 
 // Verify Token Middleware
 const verifyToken = (req, res, next) => {
-  console.log(req.cookies);
+  console.log("req", req);
+  console.log("cookie", req.cookies);
   const token = req.cookies?.token;
-  console.log(token);
+  console.log("token", token);
 
   if (!token) {
     return res.status(404).send({ message: "token not found" });

@@ -403,14 +403,37 @@ const connectDb = async () => {
       }
     });
 
-    // wishlist products
-    app.get("/wishlist", async (req, res) => {
-      const { email } = req.query;
-      const user = await userCollection.findOne({ email: email });
-      const products = await productCollection
-        .find({ _id: { $in: user.wishlist.map((id) => new ObjectId(id)) } })
-        .toArray();
-      res.json({ success: true, data: products });
+    // Wishlist products
+    app.get("/wishlist", verifyToken, async (req, res) => {
+      try {
+        const { email } = req.query;
+
+        if (!email) {
+          return res
+            .status(400)
+            .json({ success: false, message: "Email is required" });
+        }
+
+        const user = await userCollection.findOne({ email: email });
+
+        if (!user || !user.wishlist || user.wishlist.length === 0) {
+          return res.status(404).json({
+            success: false,
+            message: "No wishlist found for this user",
+          });
+        }
+
+        const products = await productCollection
+          .find({ _id: { $in: user.wishlist.map((id) => new ObjectId(id)) } })
+          .toArray();
+
+        res.json({ success: true, data: products });
+      } catch (error) {
+        console.error("Error fetching wishlist products:", error);
+        res
+          .status(500)
+          .json({ success: false, message: "Internal Server Error" });
+      }
     });
 
     // Add to Cartlist
